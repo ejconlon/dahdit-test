@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.1.
+-- This file has been generated from package.yaml by hpack version 0.35.2.
 --
 -- see: https://github.com/sol/hpack
 
@@ -13,7 +13,7 @@ bug-reports:    https://github.com/ejconlon/dahdit-test/issues
 author:         Eric Conlon
 maintainer:     ejconlon@gmail.com
 copyright:      (c) 2023 Eric Conlon
-license:        AllRightsReserved
+license:        BSD3
 build-type:     Simple
 tested-with:
     GHC == 9.2.7
@@ -26,7 +26,7 @@ source-repository head
 
 library
   exposed-modules:
-      DahditTest.Main
+      Test.Dahdit.Arb
   other-modules:
       Paths_dahdit_test
   hs-source-dirs:
@@ -59,43 +59,12 @@ library
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -fno-warn-unused-top-binds
   build-depends:
       base >=4.12 && <5
-  default-language: GHC2021
-
-executable dahdit-test-exe
-  main-is: Main.hs
-  other-modules:
-      Paths_dahdit_test
-  hs-source-dirs:
-      exe
-  default-extensions:
-      BangPatterns
-      ConstraintKinds
-      DataKinds
-      DeriveFunctor
-      DeriveFoldable
-      DeriveGeneric
-      DeriveTraversable
-      DerivingStrategies
-      DerivingVia
-      FlexibleContexts
-      FlexibleInstances
-      FunctionalDependencies
-      GADTs
-      GeneralizedNewtypeDeriving
-      LambdaCase
-      KindSignatures
-      MultiParamTypeClasses
-      Rank2Types
-      ScopedTypeVariables
-      StandaloneDeriving
-      TupleSections
-      TypeApplications
-      TypeOperators
-      TypeFamilies
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -fno-warn-unused-top-binds -threaded -rtsopts -with-rtsopts=-N
-  build-depends:
-      base >=4.12 && <5
-    , dahdit-test
+    , bytestring
+    , containers
+    , dahdit ==0.4.*
+    , falsify >=0.1.1 && <0.2
+    , tasty
+    , tasty-hunit
   default-language: GHC2021
 
 test-suite dahdit-test-test
@@ -133,7 +102,11 @@ test-suite dahdit-test-test
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -fno-warn-unused-top-binds -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.12 && <5
+    , bytestring
+    , containers
+    , dahdit ==0.4.*
     , dahdit-test
+    , falsify >=0.1.1 && <0.2
     , tasty
     , tasty-hunit
   default-language: GHC2021
