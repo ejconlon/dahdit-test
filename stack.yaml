@@ -11,5 +11,5 @@ extra-deps:
 # TODO Use Hackage version when released
 # - dahdit-0.4.0
 - git: git@github.com:ejconlon/dahdit.git
-  commit: f02a4aad80fcd65e671453f4f83589568002a355
+  commit: bf4c9bdbc3cf6eedf3d946704a6df3c027e5c888
 - data-sword-0.2.0.3

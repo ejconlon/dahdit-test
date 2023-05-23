@@ -37,7 +37,9 @@ import Dahdit
   , Int64LE (..)
   -- , StaticBytes (..)
   -- , StaticSeq (..)
-  , TermBytes (..)
+
+  , TermBytes16 (..)
+  , TermBytes8 (..)
   , Word16BE (..)
   , Word16LE (..)
   , Word32BE (..)
@@ -283,8 +285,11 @@ instance (LengthBounds (DahditIdx p)) => Arb (DahditIdx p) IntSet where
 instance (LengthBounds (DahditIdx p), Arb (DahditIdx p) a) => Arb (DahditIdx p) (IntMap a) where
   arb = arbList IntMap.fromList
 
-instance LengthBounds (DahditIdx p) => Arb (DahditIdx p) TermBytes where
-  arb = arbList (TermBytes . BSS.pack)
+instance LengthBounds (DahditIdx p) => Arb (DahditIdx p) TermBytes8 where
+  arb = arbList (TermBytes8 . BSS.pack)
+
+instance LengthBounds (DahditIdx p) => Arb (DahditIdx p) TermBytes16 where
+  arb = arbList (TermBytes16 . BSS.pack)
 
 -- instance LengthBounds (DahditIdx p) => Arb (DahditIdx p) (StaticBytes n) where
 --   arb = arbListN (StaticBytes . BSS.pack)
