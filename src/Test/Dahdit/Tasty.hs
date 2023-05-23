@@ -1,14 +1,10 @@
 module Test.Dahdit.Tasty
-  ( GenRTCase (..)
-  , dynGenRTCase
-  , staGenRTCase
-  , testGenRTCase
-  , FileRTCase (..)
-  , testFileRTCase
-  , UnitRTCase (..)
-  , testUnitRTCase
-  , RTCase (..)
-  , testRTCase
+  ( RT
+  , genRT
+  , fileRT
+  , unitRT
+  , testRT
+  , staticRT
   )
 where
 
@@ -29,27 +25,19 @@ failAt :: MonadFail m => TestName -> GetError -> ByteCount -> m ()
 failAt name err bc = fail ("Decode " ++ name ++ " failed at " ++ show (unByteCount bc) ++ ": " ++ show err)
 
 -- | A "round-trip" case
-data GenRTCase where
-  GenRTCase :: (Eq a, Show a, Binary a) => TestName -> Gen a -> Maybe ByteCount -> GenRTCase
+data GenRT where
+  GenRT :: (Eq a, Show a, Binary a) => TestName -> Gen a -> Maybe ByteCount -> GenRT
 
--- | A "dynamically-sized" case
-dynGenRTCase :: (Eq a, Show a, Binary a) => TestName -> Gen a -> GenRTCase
-dynGenRTCase name gen = GenRTCase name gen Nothing
-
-proxyFor :: f a -> Proxy a
-proxyFor _ = Proxy
-
--- | A "statically-sized" case
-staGenRTCase :: (Eq a, Show a, StaticByteSized a, Binary a) => TestName -> Gen a -> GenRTCase
-staGenRTCase name gen = GenRTCase name gen (Just (staticByteSize (proxyFor gen)))
+genRT :: (Eq a, Show a, Binary a) => TestName -> Gen a -> RT
+genRT name gen = RTGen (GenRT name gen Nothing)
 
 type AssertEq m = forall a. (Eq a, Show a) => a -> a -> m ()
 
 propAssertEq :: AssertEq Property
 propAssertEq x y = FP.assert (FR.eq FR..$ ("LHS", x) FR..$ ("RHS", y))
 
-runValueRTCase :: (MonadFail m, Eq a, Show a, Binary a) => AssertEq m -> TestName -> Maybe ByteCount -> a -> m ()
-runValueRTCase assertEq name mayStaBc startVal = do
+runValueRT :: (MonadFail m, Eq a, Show a, Binary a) => AssertEq m -> TestName -> Maybe ByteCount -> a -> m ()
+runValueRT assertEq name mayStaBc startVal = do
   let startDynBc = byteSize startVal
   for_ mayStaBc (assertEq startDynBc)
   let encVal = encode startVal
@@ -64,10 +52,10 @@ runValueRTCase assertEq name mayStaBc startVal = do
       assertEq endConBc startDynBc
       assertEq encBc startDynBc
 
-testGenRTCase :: GenRTCase -> TestTree
-testGenRTCase (GenRTCase name gen mayStaBc) =
+testGenRT :: GenRT -> TestTree
+testGenRT (GenRT name gen mayStaBc) =
   testProperty name $
-    FP.gen gen >>= runValueRTCase propAssertEq name mayStaBc
+    FP.gen gen >>= runValueRT propAssertEq name mayStaBc
 
 data FileExpect a
   = FileExpectOk
@@ -75,8 +63,11 @@ data FileExpect a
   | FileExpectFail
   deriving stock (Eq, Ord, Show)
 
-data FileRTCase where
-  FileRTCase :: (Eq a, Show a, Binary a) => TestName -> FilePath -> FileExpect a -> Maybe ByteCount -> FileRTCase
+data FileRT where
+  FileRT :: (Eq a, Show a, Binary a) => TestName -> FilePath -> FileExpect a -> Maybe ByteCount -> FileRT
+
+fileRT :: (Eq a, Show a, Binary a) => TestName -> FilePath -> FileExpect a -> RT
+fileRT name fn ex = RTFile (FileRT name fn ex Nothing)
 
 proxyForFE :: FileExpect a -> Proxy a
 proxyForFE _ = Proxy
@@ -92,8 +83,8 @@ shouldFail = \case
 reDecodeEnd :: Binary a => a -> (Either GetError a, ByteCount)
 reDecodeEnd = decodeEnd . encode @_ @BSS.ShortByteString
 
-testFileRTCase :: FileRTCase -> TestTree
-testFileRTCase (FileRTCase name fn fe mayStaBc) = testCase name $ do
+testFileRT :: FileRT -> TestTree
+testFileRT (FileRT name fn fe mayStaBc) = testCase name $ do
   (fileRes, fileBc) <- decodeFileAs (proxyForFE fe) fn
   case fileRes of
     Left err ->
@@ -113,21 +104,33 @@ testFileRTCase (FileRTCase name fn fe mayStaBc) = testCase name $ do
           endVal @?= fileVal
           endConBc @?= dynBc
 
-data UnitRTCase where
-  UnitRTCase :: (Eq a, Show a, Binary a) => TestName -> a -> Maybe ByteCount -> UnitRTCase
+data UnitRT where
+  UnitRT :: (Eq a, Show a, Binary a) => TestName -> a -> Maybe ByteCount -> UnitRT
 
-testUnitRTCase :: UnitRTCase -> TestTree
-testUnitRTCase (UnitRTCase name val mayStaBc) =
+unitRT :: (Eq a, Show a, Binary a) => TestName -> a -> RT
+unitRT name val = RTUnit (UnitRT name val Nothing)
+
+testUnitRT :: UnitRT -> TestTree
+testUnitRT (UnitRT name val mayStaBc) =
   testCase name $
-    runValueRTCase (@?=) name mayStaBc val
+    runValueRT (@?=) name mayStaBc val
 
-data RTCase
-  = RTCaseGen !GenRTCase
-  | RTCaseFile !FileRTCase
-  | RTCaseUnit !UnitRTCase
+data RT
+  = RTGen !GenRT
+  | RTFile !FileRT
+  | RTUnit !UnitRT
 
-testRTCase :: RTCase -> TestTree
-testRTCase = \case
-  RTCaseGen x -> testGenRTCase x
-  RTCaseFile x -> testFileRTCase x
-  RTCaseUnit x -> testUnitRTCase x
+testRT :: RT -> TestTree
+testRT = \case
+  RTGen x -> testGenRT x
+  RTFile x -> testFileRT x
+  RTUnit x -> testUnitRT x
+
+staticRT :: StaticByteSized a => Proxy a -> RT -> RT
+staticRT p = go
+ where
+  sz = Just (staticByteSize p)
+  go = \case
+    RTGen (GenRT x y _) -> RTGen (GenRT x y sz)
+    RTFile (FileRT x y z _) -> RTFile (FileRT x y z sz)
+    RTUnit (UnitRT x y _) -> RTUnit (UnitRT x y sz)
