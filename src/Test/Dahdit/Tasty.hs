@@ -10,12 +10,13 @@ module Test.Dahdit.Tasty
 where
 
 import Control.Monad (unless, when)
-import Dahdit (Binary (..), ByteCount (..), GetError, StaticByteSized (..), decodeEnd, decodeFileEnd, encode)
+import Dahdit (Binary (..), ByteCount (..), GetError, StaticByteSized (..), decodeEnd, decodeFileEnd, encode, encodeFile)
 import Data.ByteString.Short qualified as BSS
 import Data.Foldable (for_)
 import Data.Proxy (Proxy (..))
 import Data.Tagged (Tagged, untag)
 import Options.Applicative (help, long, switch)
+import System.Directory (doesFileExist)
 import Test.Falsify.Generator (Gen)
 import Test.Falsify.Predicate qualified as FR
 import Test.Falsify.Property (Property)
@@ -88,26 +89,32 @@ reDecodeEnd :: Binary a => a -> (Either GetError a, ByteCount)
 reDecodeEnd = decodeEnd . encode @_ @BSS.ShortByteString
 
 testFileRT :: FileRT -> TestTree
-testFileRT (FileRT name fn fe mayStaBc) = askOption $ \(wm :: DahditWriteMissing) ->
+testFileRT (FileRT name fn fe mayStaBc) = askOption $ \(DahditWriteMissing wm) ->
   testCase name $ do
-    (fileRes, fileBc) <- decodeFileAs (proxyForFE fe) fn
-    case fileRes of
-      Left err ->
-        unless
-          (shouldFail fe)
-          (fail ("Decode " ++ fn ++ " failed at " ++ show (unByteCount fileBc) ++ ": " ++ show err))
-      Right fileVal -> do
-        when (shouldFail fe) (fail "Expected failure")
-        -- Rendered size should not be larger than input size
-        let dynBc = byteSize fileVal
-        for_ mayStaBc (dynBc @?=)
-        unless (dynBc <= fileBc) (fail "Bad byte size")
-        let (endRes, endConBc) = reDecodeEnd fileVal
-        case endRes of
-          Left err -> fail ("Re-decode " ++ fn ++ " failed: " ++ show err)
-          Right endVal -> do
-            endVal @?= fileVal
-            endConBc @?= dynBc
+    exists <- doesFileExist fn
+    if exists
+      then do
+        (fileRes, fileBc) <- decodeFileAs (proxyForFE fe) fn
+        case fileRes of
+          Left err ->
+            unless
+              (shouldFail fe)
+              (fail ("Decode " ++ fn ++ " failed at " ++ show (unByteCount fileBc) ++ ": " ++ show err))
+          Right fileVal -> do
+            when (shouldFail fe) (fail "Expected failure")
+            -- Rendered size should not be larger than input size
+            let dynBc = byteSize fileVal
+            for_ mayStaBc (dynBc @?=)
+            unless (dynBc <= fileBc) (fail "Bad byte size")
+            let (endRes, endConBc) = reDecodeEnd fileVal
+            case endRes of
+              Left err -> fail ("Re-decode " ++ fn ++ " failed: " ++ show err)
+              Right endVal -> do
+                endVal @?= fileVal
+                endConBc @?= dynBc
+      else case (wm, fe) of
+        (True, FileExpectSpecific val) -> encodeFile val fn
+        _ -> fail ("Missing file: " ++ fn)
 
 data UnitRT where
   UnitRT :: (Eq a, Show a, Binary a) => TestName -> a -> Maybe ByteCount -> UnitRT
