@@ -22,8 +22,10 @@ where
 
 import Control.Applicative (liftA2)
 import Dahdit
-  ( DoubleBE (..)
+  ( BoolByte (..)
+  , DoubleBE (..)
   , DoubleLE (..)
+  , ExactBytes (..)
   , FloatBE (..)
   , FloatLE (..)
   , Int16BE (..)
@@ -32,6 +34,9 @@ import Dahdit
   , Int32LE (..)
   , Int64BE (..)
   , Int64LE (..)
+  -- , StaticBytes (..)
+  -- , StaticSeq (..)
+  , TermBytes (..)
   , Word16BE (..)
   , Word16LE (..)
   , Word32BE (..)
@@ -43,12 +48,21 @@ import Data.Bits (FiniteBits (..))
 import Data.ByteString.Internal (w2c)
 import Data.ByteString.Short (ShortByteString)
 import Data.ByteString.Short qualified as BSS
+import Data.Coerce (coerce)
 import Data.Int (Int16, Int32, Int64, Int8)
+import Data.IntMap (IntMap)
+import Data.IntMap qualified as IntMap
+import Data.IntSet (IntSet)
+import Data.IntSet qualified as IntSet
 import Data.List.NonEmpty (NonEmpty (..))
+import Data.Map.Strict (Map)
+import Data.Map.Strict qualified as Map
 import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
 import Data.Sequence (Seq)
 import Data.Sequence qualified as Seq
+import Data.Set (Set)
+import Data.Set qualified as Set
 import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1 (..), (:*:) (..), (:+:) (..))
 import Test.Falsify.Generator (Gen)
@@ -89,7 +103,7 @@ genSBS :: Word -> Word -> Gen ShortByteString
 genSBS mn mx = fmap BSS.pack (genList mn mx genUnsigned)
 
 class Arb p a where
-  arb :: Proxy p -> Gen a
+  arb :: Proxy (p, a) -> Gen a
 
 newtype ArbSigned a = ArbSigned {unArbSigned :: a}
 
@@ -112,7 +126,7 @@ instance (Enum a, Bounded a) => Arb p (ArbEnum a) where
   arb _ = fmap ArbEnum genEnum
 
 class GArb p f where
-  garb :: Proxy p -> Gen (f a)
+  garb :: Proxy (p, f a) -> Gen (f a)
 
 -- Unit
 instance GArb p U1 where
@@ -120,24 +134,36 @@ instance GArb p U1 where
 
 -- Metadata
 instance GArb p a => GArb p (M1 i c a) where
-  garb = fmap M1 . garb
+  garb = fmap M1 . garb @p . coerce
 
 -- Product
 instance (GArb p a, GArb p b) => GArb p (a :*: b) where
-  garb p = liftA2 (:*:) (garb p) (garb p)
+  garb p = liftA2 (:*:) (garb @p (coerce p)) (garb @p (coerce p))
 
 -- Sum
 instance (GArb p a, GArb p b) => GArb p (a :+: b) where
-  garb p = FG.choose (fmap L1 (garb p)) (fmap R1 (garb p))
+  garb p = FG.choose (fmap L1 (garb @p (coerce p))) (fmap R1 (garb @p (coerce p)))
 
 -- Field
 instance Arb p a => GArb p (K1 i a) where
-  garb = fmap K1 . arb
+  garb = fmap K1 . arb @p . coerce
 
 newtype ArbGeneric p a = ArbGeneric {unArbGeneric :: a}
 
 instance (Generic t, GArb p (Rep t)) => Arb p (ArbGeneric p t) where
-  arb = fmap (ArbGeneric . to) . garb
+  arb = fmap (ArbGeneric . to) . garb @p . coerce
+
+class LengthBounds p where
+  lengthBounds :: Proxy p -> (Word, Word)
+
+proxyForSrcElem :: ([a] -> b) -> Proxy (p, b) -> Proxy (p, a)
+proxyForSrcElem _ _ = Proxy
+
+arbList :: (LengthBounds p, Arb p a) => ([a] -> b) -> Proxy (p, b) -> Gen b
+arbList f p =
+  let g = arb (proxyForSrcElem f p)
+      (mn, mx) = lengthBounds (fmap fst p)
+  in  fmap f (genList mn mx g)
 
 data DahditIdx a
 
@@ -196,7 +222,7 @@ deriving newtype instance Arb (DahditIdx p) FloatBE
 deriving newtype instance Arb (DahditIdx p) DoubleBE
 
 instance Arb (DahditIdx p) Char where
-  arb = fmap w2c . arb
+  arb = fmap w2c . arb @(DahditIdx p) @Word8 . coerce
 
 deriving via
   (ArbGeneric (DahditIdx p) ())
@@ -237,3 +263,36 @@ deriving via
   (ArbGeneric (DahditIdx p) (a, b, c, d, e))
   instance
     (Arb (DahditIdx p) a, Arb (DahditIdx p) b, Arb (DahditIdx p) c, Arb (DahditIdx p) d, Arb (DahditIdx p) e) => Arb (DahditIdx p) (a, b, c, d, e)
+
+instance (LengthBounds (DahditIdx p), Arb (DahditIdx p) a) => Arb (DahditIdx p) [a] where
+  arb = arbList id
+
+instance (LengthBounds (DahditIdx p), Arb (DahditIdx p) a) => Arb (DahditIdx p) (Seq a) where
+  arb = arbList Seq.fromList
+
+instance (LengthBounds (DahditIdx p), Arb (DahditIdx p) a, Arb (DahditIdx p) b, Ord a) => Arb (DahditIdx p) (Map a b) where
+  arb = arbList Map.fromList
+
+instance (LengthBounds (DahditIdx p), Arb (DahditIdx p) a, Ord a) => Arb (DahditIdx p) (Set a) where
+  arb = arbList Set.fromList
+
+instance (LengthBounds (DahditIdx p)) => Arb (DahditIdx p) IntSet where
+  arb = arbList IntSet.fromList
+
+instance (LengthBounds (DahditIdx p), Arb (DahditIdx p) a) => Arb (DahditIdx p) (IntMap a) where
+  arb = arbList IntMap.fromList
+
+instance LengthBounds (DahditIdx p) => Arb (DahditIdx p) TermBytes where
+  arb = arbList (TermBytes . BSS.pack)
+
+-- instance LengthBounds (DahditIdx p) => Arb (DahditIdx p) (StaticBytes n) where
+--   arb = arbListN (StaticBytes . BSS.pack)
+
+-- instance (LengthBounds (DahditIdx p), Arb (DahditIdx p) a) => Arb (DahditIdx p) (StaticSeq n a) where
+--   arb = arbListN (StaticSeq . Seq.fromList)
+
+instance Arb (DahditIdx p) BoolByte where
+  arb = fmap BoolByte . arb @(DahditIdx p) @Bool . coerce
+
+instance Arb (DahditIdx p) (ExactBytes n s) where
+  arb _ = pure (ExactBytes ())
