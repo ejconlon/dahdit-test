@@ -16,6 +16,7 @@ module Test.Dahdit.Arb
   , ArbFractional (..)
   , ArbEnum (..)
   , ArbGeneric (..)
+  , LengthBounds (..)
   , DahditIdx
   )
 where
