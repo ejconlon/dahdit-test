@@ -1,11 +1,14 @@
 module Test.Dahdit.Tasty
   ( RT
+  , FileExpect (..)
   , genRT
   , fileRT
   , unitRT
   , testRT
   , staticRT
   , DahditWriteMissing (..)
+  , dahditIngredients
+  , dahditMain
   )
 where
 
@@ -21,10 +24,11 @@ import Test.Falsify.Generator (Gen)
 import Test.Falsify.Predicate qualified as FR
 import Test.Falsify.Property (Property)
 import Test.Falsify.Property qualified as FP
-import Test.Tasty (TestName, TestTree, askOption)
+import Test.Tasty (TestName, TestTree, askOption, defaultIngredients, defaultMainWithIngredients, includingOptions)
 import Test.Tasty.Falsify (testProperty)
 import Test.Tasty.HUnit (testCase, (@?=))
-import Test.Tasty.Options (IsOption (..), safeRead)
+import Test.Tasty.Ingredients (Ingredient)
+import Test.Tasty.Options (IsOption (..), OptionDescription (..), safeRead)
 
 failAt :: MonadFail m => TestName -> GetError -> ByteCount -> m ()
 failAt name err bc = fail ("Decode " ++ name ++ " failed at " ++ show (unByteCount bc) ++ ": " ++ show err)
@@ -64,7 +68,7 @@ testGenRT (GenRT name gen mayStaBc) =
 
 data FileExpect a
   = FileExpectOk
-  | FileExpectSpecific !a
+  | FileExpectValue !a
   | FileExpectFail
   deriving stock (Eq, Ord, Show)
 
@@ -113,7 +117,7 @@ testFileRT (FileRT name fn fe mayStaBc) = askOption $ \(DahditWriteMissing wm) -
                 endVal @?= fileVal
                 endConBc @?= dynBc
       else case (wm, fe) of
-        (True, FileExpectSpecific val) -> encodeFile val fn
+        (True, FileExpectValue val) -> encodeFile val fn
         _ -> fail ("Missing file: " ++ fn)
 
 data UnitRT where
@@ -162,3 +166,11 @@ instance IsOption DahditWriteMissing where
         ( long (untag (optionName :: Tagged DahditWriteMissing String))
             <> help (untag (optionHelp :: Tagged DahditWriteMissing String))
         )
+
+dahditIngredients :: [Ingredient]
+dahditIngredients =
+  includingOptions [Option (Proxy :: Proxy DahditWriteMissing)]
+    : defaultIngredients
+
+dahditMain :: TestTree -> IO ()
+dahditMain = defaultMainWithIngredients dahditIngredients

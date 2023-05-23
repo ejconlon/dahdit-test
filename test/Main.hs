@@ -11,9 +11,9 @@ import Data.Proxy (Proxy (..))
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Test.Dahdit.Arb (Arb (..), ArbGeneric (..), DahditIdx)
-import Test.Dahdit.Tasty (genRT, staticRT, testRT, unitRT)
+import Test.Dahdit.Tasty (FileExpect (..), dahditMain, fileRT, genRT, staticRT, testRT, unitRT)
 import Test.Falsify.Generator (Gen)
-import Test.Tasty (TestTree, defaultMain, testGroup)
+import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 
 data P
@@ -44,18 +44,20 @@ testDummy = testCase "dummy" $ do
 
 main :: IO ()
 main =
-  defaultMain
+  dahditMain
     $ testGroup
       "DahditTest"
     $ testRT
       <$> join
         [
           [ genRT "DynFoo prop" (arbI (Proxy @DynFoo))
-          , unitRT "DynFoo" (DynFoo 1 2)
+          , unitRT "DynFoo unit" (DynFoo 1 2)
+          , fileRT "DynFoo file" "testdata/dynfoo.bin" (FileExpectValue (DynFoo 1 2))
           ]
         , let p = Proxy @StaFoo
           in  staticRT p
                 <$> [ genRT "StaFoo prop" (arbI p)
                     , unitRT "StaFoo unit" (StaFoo 3 4)
+                    , fileRT "DynFoo file" "testdata/stafoo.bin" (FileExpectValue (StaFoo 1 2))
                     ]
         ]
