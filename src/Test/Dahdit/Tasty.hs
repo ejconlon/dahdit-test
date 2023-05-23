@@ -5,6 +5,7 @@ module Test.Dahdit.Tasty
   , unitRT
   , testRT
   , staticRT
+  , DahditWriteMissing (..)
   )
 where
 
@@ -13,13 +14,16 @@ import Dahdit (Binary (..), ByteCount (..), GetError, StaticByteSized (..), deco
 import Data.ByteString.Short qualified as BSS
 import Data.Foldable (for_)
 import Data.Proxy (Proxy (..))
+import Data.Tagged (Tagged, untag)
+import Options.Applicative (help, long, switch)
 import Test.Falsify.Generator (Gen)
 import Test.Falsify.Predicate qualified as FR
 import Test.Falsify.Property (Property)
 import Test.Falsify.Property qualified as FP
-import Test.Tasty (TestName, TestTree)
+import Test.Tasty (TestName, TestTree, askOption)
 import Test.Tasty.Falsify (testProperty)
 import Test.Tasty.HUnit (testCase, (@?=))
+import Test.Tasty.Options (IsOption (..), safeRead)
 
 failAt :: MonadFail m => TestName -> GetError -> ByteCount -> m ()
 failAt name err bc = fail ("Decode " ++ name ++ " failed at " ++ show (unByteCount bc) ++ ": " ++ show err)
@@ -84,25 +88,26 @@ reDecodeEnd :: Binary a => a -> (Either GetError a, ByteCount)
 reDecodeEnd = decodeEnd . encode @_ @BSS.ShortByteString
 
 testFileRT :: FileRT -> TestTree
-testFileRT (FileRT name fn fe mayStaBc) = testCase name $ do
-  (fileRes, fileBc) <- decodeFileAs (proxyForFE fe) fn
-  case fileRes of
-    Left err ->
-      unless
-        (shouldFail fe)
-        (fail ("Decode " ++ fn ++ " failed at " ++ show (unByteCount fileBc) ++ ": " ++ show err))
-    Right fileVal -> do
-      when (shouldFail fe) (fail "Expected failure")
-      -- Rendered size should not be larger than input size
-      let dynBc = byteSize fileVal
-      for_ mayStaBc (dynBc @?=)
-      unless (dynBc <= fileBc) (fail "Bad byte size")
-      let (endRes, endConBc) = reDecodeEnd fileVal
-      case endRes of
-        Left err -> fail ("Re-decode " ++ fn ++ " failed: " ++ show err)
-        Right endVal -> do
-          endVal @?= fileVal
-          endConBc @?= dynBc
+testFileRT (FileRT name fn fe mayStaBc) = askOption $ \(wm :: DahditWriteMissing) ->
+  testCase name $ do
+    (fileRes, fileBc) <- decodeFileAs (proxyForFE fe) fn
+    case fileRes of
+      Left err ->
+        unless
+          (shouldFail fe)
+          (fail ("Decode " ++ fn ++ " failed at " ++ show (unByteCount fileBc) ++ ": " ++ show err))
+      Right fileVal -> do
+        when (shouldFail fe) (fail "Expected failure")
+        -- Rendered size should not be larger than input size
+        let dynBc = byteSize fileVal
+        for_ mayStaBc (dynBc @?=)
+        unless (dynBc <= fileBc) (fail "Bad byte size")
+        let (endRes, endConBc) = reDecodeEnd fileVal
+        case endRes of
+          Left err -> fail ("Re-decode " ++ fn ++ " failed: " ++ show err)
+          Right endVal -> do
+            endVal @?= fileVal
+            endConBc @?= dynBc
 
 data UnitRT where
   UnitRT :: (Eq a, Show a, Binary a) => TestName -> a -> Maybe ByteCount -> UnitRT
@@ -134,3 +139,19 @@ staticRT p = go
     RTGen (GenRT x y _) -> RTGen (GenRT x y sz)
     RTFile (FileRT x y z _) -> RTFile (FileRT x y z sz)
     RTUnit (UnitRT x y _) -> RTUnit (UnitRT x y sz)
+
+newtype DahditWriteMissing = DahditWriteMissing {unDahditWriteMissing :: Bool}
+  deriving stock (Show)
+  deriving newtype (Eq, Ord)
+
+instance IsOption DahditWriteMissing where
+  defaultValue = DahditWriteMissing False
+  parseValue = fmap DahditWriteMissing . safeRead
+  optionName = return "dahdit-write-missing"
+  optionHelp = return "Write missing test files"
+  optionCLParser =
+    DahditWriteMissing
+      <$> switch
+        ( long (untag (optionName :: Tagged DahditWriteMissing String))
+            <> help (untag (optionHelp :: Tagged DahditWriteMissing String))
+        )

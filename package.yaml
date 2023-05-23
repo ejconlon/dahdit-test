@@ -19,10 +19,12 @@ dependencies:
 - base >= 4.12 && < 5
 - dahdit >= 0.4 && < 0.5
 - falsify >= 0.1.1 && < 0.2
-- bytestring
-- containers
-- tasty
-- tasty-hunit
+- bytestring >= 0.11 && < 0.12
+- containers >= 0.6 && < 0.7
+- tagged >= 0.8 && < 0.9
+- tasty >= 1.4 && < 1.5
+- tasty-hunit >= 0.10 && < 0.11
+- optparse-applicative >= 0.17 && < 0.18
 
 default-extensions:
 - BangPatterns
