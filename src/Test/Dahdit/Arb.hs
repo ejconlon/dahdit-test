@@ -156,149 +156,151 @@ newtype ArbGeneric p a = ArbGeneric {unArbGeneric :: a}
 instance (Generic t, GArb p (Rep t)) => Arb p (ArbGeneric p t) where
   arb p = fmap (ArbGeneric . to) . garb p . coerce
 
-class LengthBounds p where
-  lengthBounds :: Proxy p -> (Word, Word)
+class LengthBounds p a where
+  lengthBounds :: Proxy p -> Proxy a -> (Word, Word)
 
 proxyForSrcElem :: ([a] -> b) -> Proxy b -> Proxy a
 proxyForSrcElem _ _ = Proxy
 
-arbList :: (LengthBounds p, Arb p a) => ([a] -> b) -> Proxy p -> Proxy b -> Gen b
+arbList :: (LengthBounds p b, Arb p a) => ([a] -> b) -> Proxy p -> Proxy b -> Gen b
 arbList f p pb =
   let g = arb p (proxyForSrcElem f pb)
-      (mn, mx) = lengthBounds p
+      (mn, mx) = lengthBounds p pb
   in  fmap f (genList mn mx g)
 
-data DahditIdx a
+data DahditIdx p
 
-deriving via (ArbUnsigned Word8) instance Arb (DahditIdx p) Word8
+type D = DahditIdx
 
-deriving via (ArbSigned Int8) instance Arb (DahditIdx p) Int8
+deriving via (ArbUnsigned Word8) instance Arb (D p) Word8
 
-deriving via (ArbUnsigned Word16) instance Arb (DahditIdx p) Word16
+deriving via (ArbSigned Int8) instance Arb (D p) Int8
 
-deriving via (ArbSigned Int16) instance Arb (DahditIdx p) Int16
+deriving via (ArbUnsigned Word16) instance Arb (D p) Word16
 
-deriving via (ArbUnsigned Word32) instance Arb (DahditIdx p) Word32
+deriving via (ArbSigned Int16) instance Arb (D p) Int16
 
-deriving via (ArbSigned Int32) instance Arb (DahditIdx p) Int32
+deriving via (ArbUnsigned Word32) instance Arb (D p) Word32
 
-deriving via (ArbUnsigned Word64) instance Arb (DahditIdx p) Word64
+deriving via (ArbSigned Int32) instance Arb (D p) Int32
 
-deriving via (ArbSigned Int64) instance Arb (DahditIdx p) Int64
+deriving via (ArbUnsigned Word64) instance Arb (D p) Word64
 
-deriving via (ArbFractional Float) instance Arb (DahditIdx p) Float
+deriving via (ArbSigned Int64) instance Arb (D p) Int64
 
-deriving via (ArbFractional Double) instance Arb (DahditIdx p) Double
+deriving via (ArbFractional Float) instance Arb (D p) Float
 
-deriving via (ArbSigned Int) instance Arb (DahditIdx p) Int
+deriving via (ArbFractional Double) instance Arb (D p) Double
 
-deriving newtype instance Arb (DahditIdx p) Word16LE
+deriving via (ArbSigned Int) instance Arb (D p) Int
 
-deriving newtype instance Arb (DahditIdx p) Int16LE
+deriving newtype instance Arb (D p) Word16LE
 
-deriving newtype instance Arb (DahditIdx p) Word32LE
+deriving newtype instance Arb (D p) Int16LE
 
-deriving newtype instance Arb (DahditIdx p) Int32LE
+deriving newtype instance Arb (D p) Word32LE
 
-deriving newtype instance Arb (DahditIdx p) Word64LE
+deriving newtype instance Arb (D p) Int32LE
 
-deriving newtype instance Arb (DahditIdx p) Int64LE
+deriving newtype instance Arb (D p) Word64LE
 
-deriving newtype instance Arb (DahditIdx p) FloatLE
+deriving newtype instance Arb (D p) Int64LE
 
-deriving newtype instance Arb (DahditIdx p) DoubleLE
+deriving newtype instance Arb (D p) FloatLE
 
-deriving newtype instance Arb (DahditIdx p) Word16BE
+deriving newtype instance Arb (D p) DoubleLE
 
-deriving newtype instance Arb (DahditIdx p) Int16BE
+deriving newtype instance Arb (D p) Word16BE
 
-deriving newtype instance Arb (DahditIdx p) Word32BE
+deriving newtype instance Arb (D p) Int16BE
 
-deriving newtype instance Arb (DahditIdx p) Int32BE
+deriving newtype instance Arb (D p) Word32BE
 
-deriving newtype instance Arb (DahditIdx p) Word64BE
+deriving newtype instance Arb (D p) Int32BE
 
-deriving newtype instance Arb (DahditIdx p) Int64BE
+deriving newtype instance Arb (D p) Word64BE
 
-deriving newtype instance Arb (DahditIdx p) FloatBE
+deriving newtype instance Arb (D p) Int64BE
 
-deriving newtype instance Arb (DahditIdx p) DoubleBE
+deriving newtype instance Arb (D p) FloatBE
 
-instance Arb (DahditIdx p) Char where
+deriving newtype instance Arb (D p) DoubleBE
+
+instance Arb (D p) Char where
   arb p _ = fmap w2c (arb p Proxy)
 
 deriving via
-  (ArbGeneric (DahditIdx p) ())
+  (ArbGeneric (D p) ())
   instance
-    Arb (DahditIdx p) ()
+    Arb (D p) ()
 
 deriving via
-  (ArbGeneric (DahditIdx p) Bool)
+  (ArbGeneric (D p) Bool)
   instance
-    Arb (DahditIdx p) Bool
+    Arb (D p) Bool
 
 deriving via
-  (ArbGeneric (DahditIdx p) (Maybe a))
+  (ArbGeneric (D p) (Maybe a))
   instance
-    Arb (DahditIdx p) a => Arb (DahditIdx p) (Maybe a)
+    Arb (D p) a => Arb (D p) (Maybe a)
 
 deriving via
-  (ArbGeneric (DahditIdx p) (Either a b))
+  (ArbGeneric (D p) (Either a b))
   instance
-    (Arb (DahditIdx p) a, Arb (DahditIdx p) b) => Arb (DahditIdx p) (Either a b)
+    (Arb (D p) a, Arb (D p) b) => Arb (D p) (Either a b)
 
 deriving via
-  (ArbGeneric (DahditIdx p) (a, b))
+  (ArbGeneric (D p) (a, b))
   instance
-    (Arb (DahditIdx p) a, Arb (DahditIdx p) b) => Arb (DahditIdx p) (a, b)
+    (Arb (D p) a, Arb (D p) b) => Arb (D p) (a, b)
 
 deriving via
-  (ArbGeneric (DahditIdx p) (a, b, c))
+  (ArbGeneric (D p) (a, b, c))
   instance
-    (Arb (DahditIdx p) a, Arb (DahditIdx p) b, Arb (DahditIdx p) c) => Arb (DahditIdx p) (a, b, c)
+    (Arb (D p) a, Arb (D p) b, Arb (D p) c) => Arb (D p) (a, b, c)
 
 deriving via
-  (ArbGeneric (DahditIdx p) (a, b, c, d))
+  (ArbGeneric (D p) (a, b, c, d))
   instance
-    (Arb (DahditIdx p) a, Arb (DahditIdx p) b, Arb (DahditIdx p) c, Arb (DahditIdx p) d) => Arb (DahditIdx p) (a, b, c, d)
+    (Arb (D p) a, Arb (D p) b, Arb (D p) c, Arb (D p) d) => Arb (D p) (a, b, c, d)
 
 deriving via
-  (ArbGeneric (DahditIdx p) (a, b, c, d, e))
+  (ArbGeneric (D p) (a, b, c, d, e))
   instance
-    (Arb (DahditIdx p) a, Arb (DahditIdx p) b, Arb (DahditIdx p) c, Arb (DahditIdx p) d, Arb (DahditIdx p) e) => Arb (DahditIdx p) (a, b, c, d, e)
+    (Arb (D p) a, Arb (D p) b, Arb (D p) c, Arb (D p) d, Arb (D p) e) => Arb (D p) (a, b, c, d, e)
 
-instance (LengthBounds (DahditIdx p), Arb (DahditIdx p) a) => Arb (DahditIdx p) [a] where
+instance (LengthBounds (D p) [a], Arb (D p) a) => Arb (D p) [a] where
   arb = arbList id
 
-instance (LengthBounds (DahditIdx p), Arb (DahditIdx p) a) => Arb (DahditIdx p) (Seq a) where
+instance (LengthBounds (D p) (Seq a), Arb (D p) a) => Arb (D p) (Seq a) where
   arb = arbList Seq.fromList
 
-instance (LengthBounds (DahditIdx p), Arb (DahditIdx p) a, Arb (DahditIdx p) b, Ord a) => Arb (DahditIdx p) (Map a b) where
+instance (LengthBounds (D p) (Map a b), Arb (D p) a, Arb (D p) b, Ord a) => Arb (D p) (Map a b) where
   arb = arbList Map.fromList
 
-instance (LengthBounds (DahditIdx p), Arb (DahditIdx p) a, Ord a) => Arb (DahditIdx p) (Set a) where
+instance (LengthBounds (D p) (Set a), Arb (D p) a, Ord a) => Arb (D p) (Set a) where
   arb = arbList Set.fromList
 
-instance (LengthBounds (DahditIdx p)) => Arb (DahditIdx p) IntSet where
+instance (LengthBounds (D p) IntSet) => Arb (D p) IntSet where
   arb = arbList IntSet.fromList
 
-instance (LengthBounds (DahditIdx p), Arb (DahditIdx p) a) => Arb (DahditIdx p) (IntMap a) where
+instance (LengthBounds (D p) (IntMap a), Arb (D p) a) => Arb (D p) (IntMap a) where
   arb = arbList IntMap.fromList
 
-instance LengthBounds (DahditIdx p) => Arb (DahditIdx p) TermBytes8 where
+instance LengthBounds (D p) TermBytes8 => Arb (D p) TermBytes8 where
   arb = arbList (TermBytes8 . BSS.pack)
 
-instance LengthBounds (DahditIdx p) => Arb (DahditIdx p) TermBytes16 where
+instance LengthBounds (D p) TermBytes16 => Arb (D p) TermBytes16 where
   arb = arbList (TermBytes16 . BSS.pack)
 
--- instance LengthBounds (DahditIdx p) => Arb (DahditIdx p) (StaticBytes n) where
+-- instance LengthBounds (D p) => Arb (D p) (StaticBytes n) where
 --   arb = arbListN (StaticBytes . BSS.pack)
 
--- instance (LengthBounds (DahditIdx p), Arb (DahditIdx p) a) => Arb (DahditIdx p) (StaticSeq n a) where
+-- instance (LengthBounds (D p), Arb (D p) a) => Arb (D p) (StaticSeq n a) where
 --   arb = arbListN (StaticSeq . Seq.fromList)
 
-instance Arb (DahditIdx p) BoolByte where
+instance Arb (D p) BoolByte where
   arb p _ = fmap BoolByte (arb p Proxy)
 
-instance Arb (DahditIdx p) (ExactBytes n s) where
+instance Arb (D p) (ExactBytes n s) where
   arb _ _ = pure (ExactBytes ())
