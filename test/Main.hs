@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Main
@@ -11,7 +12,7 @@ import Data.Proxy (Proxy (..))
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Test.Dahdit.Arb (Arb (..), ArbGeneric (..), DahditIdx)
-import Test.Dahdit.Tasty (FileExpect (..), dahditMain, fileRT, genRT, staticRT, testRT, unitRT)
+import Test.Dahdit.Tasty (FileExpect (..), UnitExpect (..), dahditMain, fileRT, genRT, staticRT, testRT, unitRT)
 import Test.Falsify.Generator (Gen)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -51,13 +52,13 @@ main =
       <$> join
         [
           [ genRT "DynFoo prop" (arbI (Proxy @DynFoo))
-          , unitRT "DynFoo unit" (DynFoo 1 2)
+          , unitRT "DynFoo unit" (DynFoo 1 2) (UnitExpectBytes [1, 2, 0])
           , fileRT "DynFoo file" "testdata/dynfoo.bin" (FileExpectValue (DynFoo 1 2))
           ]
         , let p = Proxy @StaFoo
           in  staticRT p
                 <$> [ genRT "StaFoo prop" (arbI p)
-                    , unitRT "StaFoo unit" (StaFoo 3 4)
+                    , unitRT "StaFoo unit" (StaFoo 3 4) (UnitExpectText "\ETX\EOT\NUL")
                     , fileRT "DynFoo file" "testdata/stafoo.bin" (FileExpectValue (StaFoo 1 2))
                     ]
         ]

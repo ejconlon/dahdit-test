@@ -69,6 +69,7 @@ library
     , tagged ==0.8.*
     , tasty ==1.4.*
     , tasty-hunit ==0.10.*
+    , text-short ==0.1.*
   default-language: GHC2021
 
 test-suite dahdit-test-test
@@ -116,4 +117,5 @@ test-suite dahdit-test-test
     , tagged ==0.8.*
     , tasty
     , tasty-hunit
+    , text-short ==0.1.*
   default-language: GHC2021

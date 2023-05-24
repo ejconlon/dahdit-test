@@ -1,6 +1,7 @@
 module Test.Dahdit.Tasty
   ( RT
   , FileExpect (..)
+  , UnitExpect (..)
   , genRT
   , fileRT
   , unitRT
@@ -18,6 +19,9 @@ import Data.ByteString.Short qualified as BSS
 import Data.Foldable (for_)
 import Data.Proxy (Proxy (..))
 import Data.Tagged (Tagged, untag)
+import Data.Text.Short (ShortText)
+import Data.Text.Short.Unsafe qualified as TSU
+import Data.Word (Word8)
 import Options.Applicative (help, long, switch)
 import System.Directory (doesFileExist)
 import Test.Falsify.Generator (Gen)
@@ -45,12 +49,16 @@ type AssertEq m = forall a. (Eq a, Show a) => a -> a -> m ()
 propAssertEq :: AssertEq Property
 propAssertEq x y = FP.assert (FR.eq FR..$ ("LHS", x) FR..$ ("RHS", y))
 
-runValueRT :: (MonadFail m, Eq a, Show a, Binary a) => AssertEq m -> TestName -> Maybe ByteCount -> a -> m ()
-runValueRT assertEq name mayStaBc startVal = do
+runValueRT :: (MonadFail m, Eq a, Show a, Binary a) => AssertEq m -> TestName -> UnitExpect -> Maybe ByteCount -> a -> m ()
+runValueRT assertEq name ue mayStaBc startVal = do
   let startDynBc = byteSize startVal
   for_ mayStaBc (assertEq startDynBc)
   let encVal = encode startVal
       encBc = ByteCount (BSS.length encVal)
+  case ue of
+    UnitExpectOk -> pure ()
+    UnitExpectText t -> assertEq (TSU.fromShortByteStringUnsafe encVal) t
+    UnitExpectBytes b -> assertEq (BSS.unpack encVal) b
   let (endRes, endConBc) = decodeEnd encVal
   case endRes of
     Left err -> failAt name err endConBc
@@ -64,7 +72,7 @@ runValueRT assertEq name mayStaBc startVal = do
 testGenRT :: GenRT -> TestTree
 testGenRT (GenRT name gen mayStaBc) =
   testProperty name $
-    FP.gen gen >>= runValueRT propAssertEq name mayStaBc
+    FP.gen gen >>= runValueRT propAssertEq name UnitExpectOk mayStaBc
 
 data FileExpect a
   = FileExpectOk
@@ -120,16 +128,22 @@ testFileRT (FileRT name fn fe mayStaBc) = askOption $ \(DahditWriteMissing wm) -
         (True, FileExpectValue val) -> encodeFile val fn
         _ -> fail ("Missing file: " ++ fn)
 
-data UnitRT where
-  UnitRT :: (Eq a, Show a, Binary a) => TestName -> a -> Maybe ByteCount -> UnitRT
+data UnitExpect
+  = UnitExpectOk
+  | UnitExpectText !ShortText
+  | UnitExpectBytes ![Word8]
+  deriving stock (Eq, Ord, Show)
 
-unitRT :: (Eq a, Show a, Binary a) => TestName -> a -> RT
-unitRT name val = RTUnit (UnitRT name val Nothing)
+data UnitRT where
+  UnitRT :: (Eq a, Show a, Binary a) => TestName -> a -> UnitExpect -> Maybe ByteCount -> UnitRT
+
+unitRT :: (Eq a, Show a, Binary a) => TestName -> a -> UnitExpect -> RT
+unitRT name val ue = RTUnit (UnitRT name val ue Nothing)
 
 testUnitRT :: UnitRT -> TestTree
-testUnitRT (UnitRT name val mayStaBc) =
+testUnitRT (UnitRT name val ue mayStaBc) =
   testCase name $
-    runValueRT (@?=) name mayStaBc val
+    runValueRT (@?=) name ue mayStaBc val
 
 data RT
   = RTGen !GenRT
@@ -149,7 +163,7 @@ staticRT p = go
   go = \case
     RTGen (GenRT x y _) -> RTGen (GenRT x y sz)
     RTFile (FileRT x y z _) -> RTFile (FileRT x y z sz)
-    RTUnit (UnitRT x y _) -> RTUnit (UnitRT x y sz)
+    RTUnit (UnitRT x y z _) -> RTUnit (UnitRT x y z sz)
 
 newtype DahditWriteMissing = DahditWriteMissing {unDahditWriteMissing :: Bool}
   deriving stock (Show)
