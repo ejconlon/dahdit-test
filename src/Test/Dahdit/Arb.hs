@@ -106,66 +106,66 @@ genSBS :: Word -> Word -> Gen ShortByteString
 genSBS mn mx = fmap BSS.pack (genList mn mx genUnsigned)
 
 class Arb p a where
-  arb :: Proxy (p, a) -> Gen a
+  arb :: Proxy p -> Proxy a -> Gen a
 
 newtype ArbSigned a = ArbSigned {unArbSigned :: a}
 
 instance (Integral a, FiniteBits a, Bounded a) => Arb p (ArbSigned a) where
-  arb _ = fmap ArbSigned genSigned
+  arb _ _ = fmap ArbSigned genSigned
 
 newtype ArbUnsigned a = ArbUnsigned {unArbUnsigned :: a}
 
 instance (Integral a, FiniteBits a, Bounded a) => Arb p (ArbUnsigned a) where
-  arb _ = fmap ArbUnsigned genUnsigned
+  arb _ _ = fmap ArbUnsigned genUnsigned
 
 newtype ArbFractional a = ArbFractional {unArbFractional :: a}
 
 instance (Fractional a) => Arb p (ArbFractional a) where
-  arb _ = fmap ArbFractional genFractional
+  arb _ _ = fmap ArbFractional genFractional
 
 newtype ArbEnum a = ArbEnum {unArbEnum :: a}
 
 instance (Enum a, Bounded a) => Arb p (ArbEnum a) where
-  arb _ = fmap ArbEnum genEnum
+  arb _ _ = fmap ArbEnum genEnum
 
 class GArb p f where
-  garb :: Proxy (p, f a) -> Gen (f a)
+  garb :: Proxy p -> Proxy (f a) -> Gen (f a)
 
 -- Unit
 instance GArb p U1 where
-  garb _ = pure U1
+  garb _ _ = pure U1
 
 -- Metadata
 instance GArb p a => GArb p (M1 i c a) where
-  garb = fmap M1 . garb @p . coerce
+  garb p = fmap M1 . garb p . coerce
 
 -- Product
 instance (GArb p a, GArb p b) => GArb p (a :*: b) where
-  garb p = liftA2 (:*:) (garb @p (coerce p)) (garb @p (coerce p))
+  garb p _ = liftA2 (:*:) (garb p Proxy) (garb p Proxy)
 
 -- Sum
 instance (GArb p a, GArb p b) => GArb p (a :+: b) where
-  garb p = FG.choose (fmap L1 (garb @p (coerce p))) (fmap R1 (garb @p (coerce p)))
+  garb p _ = FG.choose (fmap L1 (garb p Proxy)) (fmap R1 (garb p Proxy))
 
 -- Field
 instance Arb p a => GArb p (K1 i a) where
-  garb = fmap K1 . arb @p . coerce
+  garb p = fmap K1 . arb p . coerce
 
 newtype ArbGeneric p a = ArbGeneric {unArbGeneric :: a}
 
 instance (Generic t, GArb p (Rep t)) => Arb p (ArbGeneric p t) where
-  arb = fmap (ArbGeneric . to) . garb @p . coerce
+  arb p = fmap (ArbGeneric . to) . garb p . coerce
 
 class LengthBounds p where
   lengthBounds :: Proxy p -> (Word, Word)
 
-proxyForSrcElem :: ([a] -> b) -> Proxy (p, b) -> Proxy (p, a)
+proxyForSrcElem :: ([a] -> b) -> Proxy b -> Proxy a
 proxyForSrcElem _ _ = Proxy
 
-arbList :: (LengthBounds p, Arb p a) => ([a] -> b) -> Proxy (p, b) -> Gen b
-arbList f p =
-  let g = arb (proxyForSrcElem f p)
-      (mn, mx) = lengthBounds (fmap fst p)
+arbList :: (LengthBounds p, Arb p a) => ([a] -> b) -> Proxy p -> Proxy b -> Gen b
+arbList f p pb =
+  let g = arb p (proxyForSrcElem f pb)
+      (mn, mx) = lengthBounds p
   in  fmap f (genList mn mx g)
 
 data DahditIdx a
@@ -225,7 +225,7 @@ deriving newtype instance Arb (DahditIdx p) FloatBE
 deriving newtype instance Arb (DahditIdx p) DoubleBE
 
 instance Arb (DahditIdx p) Char where
-  arb = fmap w2c . arb @(DahditIdx p) @Word8 . coerce
+  arb p _ = fmap w2c (arb p Proxy)
 
 deriving via
   (ArbGeneric (DahditIdx p) ())
@@ -298,7 +298,7 @@ instance LengthBounds (DahditIdx p) => Arb (DahditIdx p) TermBytes16 where
 --   arb = arbListN (StaticSeq . Seq.fromList)
 
 instance Arb (DahditIdx p) BoolByte where
-  arb = fmap BoolByte . arb @(DahditIdx p) @Bool . coerce
+  arb p _ = fmap BoolByte (arb p Proxy)
 
 instance Arb (DahditIdx p) (ExactBytes n s) where
-  arb _ = pure (ExactBytes ())
+  arb _ _ = pure (ExactBytes ())

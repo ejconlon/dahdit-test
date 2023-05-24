@@ -24,7 +24,7 @@ proxyI :: Proxy a -> Proxy (I, a)
 proxyI _ = Proxy
 
 arbI :: Arb I a => Proxy a -> Gen a
-arbI = arb . proxyI
+arbI = arb (Proxy @I)
 
 data DynFoo = DynFoo !Word8 !Word16LE
   deriving stock (Eq, Show, Generic)
