@@ -22,7 +22,7 @@ import Data.Tagged (Tagged, untag)
 import Data.Text (Text)
 import Data.Text.Encoding qualified as TE
 import Data.Word (Word8)
-import Options.Applicative (help, long, switch)
+import Options.Applicative (flag', help, long)
 import System.Directory (doesFileExist)
 import Test.Falsify.Generator (Gen)
 import Test.Falsify.Predicate qualified as FR
@@ -176,7 +176,8 @@ instance IsOption DahditWriteMissing where
   optionHelp = return "Write missing test files"
   optionCLParser =
     DahditWriteMissing
-      <$> switch
+      <$> flag'
+        True
         ( long (untag (optionName :: Tagged DahditWriteMissing String))
             <> help (untag (optionHelp :: Tagged DahditWriteMissing String))
         )
