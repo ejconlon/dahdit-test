@@ -19,8 +19,8 @@ import Data.ByteString.Short qualified as BSS
 import Data.Foldable (for_)
 import Data.Proxy (Proxy (..))
 import Data.Tagged (Tagged, untag)
-import Data.Text.Short (ShortText)
-import Data.Text.Short.Unsafe qualified as TSU
+import Data.Text (Text)
+import Data.Text.Encoding qualified as TE
 import Data.Word (Word8)
 import Options.Applicative (help, long, switch)
 import System.Directory (doesFileExist)
@@ -57,7 +57,7 @@ runValueRT assertEq name ue mayStaBc startVal = do
       encBc = ByteCount (BSS.length encVal)
   case ue of
     UnitExpectOk -> pure ()
-    UnitExpectText t -> assertEq (TSU.fromShortByteStringUnsafe encVal) t
+    UnitExpectText t -> assertEq (TE.decodeUtf8 (BSS.fromShort encVal)) t
     UnitExpectBytes b -> assertEq (BSS.unpack encVal) b
   let (endRes, endConBc) = decodeEnd encVal
   case endRes of
@@ -130,7 +130,7 @@ testFileRT (FileRT name fn fe mayStaBc) = askOption $ \(DahditWriteMissing wm) -
 
 data UnitExpect
   = UnitExpectOk
-  | UnitExpectText !ShortText
+  | UnitExpectText !Text
   | UnitExpectBytes ![Word8]
   deriving stock (Eq, Ord, Show)
 

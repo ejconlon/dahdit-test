@@ -10,7 +10,7 @@ module Test.Dahdit.Arb
   , genSeq
   , genString
   , genSBS
-  , genST
+  , genText
   , Arb (..)
   , ArbSigned (..)
   , ArbUnsigned (..)
@@ -67,8 +67,8 @@ import Data.Sequence (Seq)
 import Data.Sequence qualified as Seq
 import Data.Set (Set)
 import Data.Set qualified as Set
-import Data.Text.Short (ShortText)
-import Data.Text.Short qualified as TS
+import Data.Text (Text)
+import Data.Text qualified as T
 import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1 (..), (:*:) (..), (:+:) (..))
 import Test.Falsify.Generator (Gen)
@@ -111,8 +111,8 @@ genString mn mx = genList mn mx genPrintableChar
 genSBS :: Word -> Word -> Gen ShortByteString
 genSBS mn mx = fmap BSS.pack (genList mn mx genUnsigned)
 
-genST :: Word -> Word -> Gen ShortText
-genST mn mx = fmap TS.pack (genString mn mx)
+genText :: Word -> Word -> Gen Text
+genText mn mx = fmap T.pack (genString mn mx)
 
 class Arb p a where
   arb :: Proxy p -> Proxy a -> Gen a
