@@ -75,6 +75,9 @@ import Test.Falsify.Generator (Gen)
 import Test.Falsify.Generator qualified as FG
 import Test.Falsify.Range qualified as FR
 
+genPrintableChar :: Gen Char
+genPrintableChar = fmap w2c (FG.integral (FR.between (32, 126)))
+
 genSigned :: (Integral a, FiniteBits a, Bounded a) => Gen a
 genSigned = FG.integral (FR.withOrigin (minBound, maxBound) 0)
 
@@ -103,13 +106,13 @@ genSeq :: Word -> Word -> Gen a -> Gen (Seq a)
 genSeq mn mx = fmap Seq.fromList . genList mn mx
 
 genString :: Word -> Word -> Gen String
-genString mn mx = genList mn mx (fmap w2c genUnsigned)
+genString mn mx = genList mn mx genPrintableChar
 
 genSBS :: Word -> Word -> Gen ShortByteString
 genSBS mn mx = fmap BSS.pack (genList mn mx genUnsigned)
 
 genST :: Word -> Word -> Gen ShortText
-genST mn mx = fmap TS.pack (genList mn mx (fmap w2c genUnsigned))
+genST mn mx = fmap TS.pack (genString mn mx)
 
 class Arb p a where
   arb :: Proxy p -> Proxy a -> Gen a
