@@ -12,15 +12,15 @@ packages:
   original:
     hackage: falsify-0.1.1
 - completed:
-    commit: bf4c9bdbc3cf6eedf3d946704a6df3c027e5c888
+    commit: 0dc1fa08418254a7ef21aaf5440e400b09e55289
     git: git@github.com:ejconlon/dahdit.git
     name: dahdit
     pantry-tree:
-      sha256: da885ef542965cad5a54ea8f8c8af4b0fc06184d07c74a360ecf66969bc17454
+      sha256: 411c721e0119d03815f46670aa106deb07e1b3ad44366b3654719f096a324d56
       size: 1690
     version: 0.4.0
   original:
-    commit: bf4c9bdbc3cf6eedf3d946704a6df3c027e5c888
+    commit: 0dc1fa08418254a7ef21aaf5440e400b09e55289
     git: git@github.com:ejconlon/dahdit.git
 - completed:
     hackage: data-sword-0.2.0.3@sha256:953cca4b4533a388df0ef17e06ac5530652d1d73decfe8b656242ccdf4b40999,1568
