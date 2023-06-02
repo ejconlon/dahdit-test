@@ -13,7 +13,7 @@ module Test.Dahdit.Tasty
   )
 where
 
-import Control.Monad (unless, when)
+import Control.Monad (unless, when, (<=<))
 import Dahdit (Binary (..), ByteCount (..), GetError, StaticByteSized (..), decodeEnd, decodeFileEnd, encode, encodeFile)
 import Data.ByteString.Short qualified as BSS
 import Data.Foldable (for_)
@@ -24,6 +24,7 @@ import Data.Text.Encoding qualified as TE
 import Data.Word (Word8)
 import Options.Applicative (flag', help, long)
 import System.Directory (doesFileExist)
+import System.IO.Unsafe (unsafePerformIO)
 import Test.Falsify.Generator (Gen)
 import Test.Falsify.Predicate qualified as FR
 import Test.Falsify.Property (Property)
@@ -49,17 +50,22 @@ type AssertEq m = forall a. (Eq a, Show a) => a -> a -> m ()
 propAssertEq :: AssertEq Property
 propAssertEq x y = FP.assert (FR.eq FR..$ ("LHS", x) FR..$ ("RHS", y))
 
+-- Falsify's Property monad cannot lift IO, so some of our codecs will not work.
+-- However, they are morally pure, so this backdoor is ok...
+hackLiftIO :: Applicative m => IO a -> m a
+hackLiftIO = pure . unsafePerformIO
+
 runValueRT :: (MonadFail m, Eq a, Show a, Binary a) => AssertEq m -> TestName -> UnitExpect -> Maybe ByteCount -> a -> m ()
 runValueRT assertEq name ue mayStaBc startVal = do
   let startDynBc = byteSize startVal
   for_ mayStaBc (assertEq startDynBc)
-  let encVal = encode startVal
-      encBc = ByteCount (BSS.length encVal)
+  encVal <- hackLiftIO (encode startVal)
+  let encBc = ByteCount (BSS.length encVal)
   case ue of
     UnitExpectOk -> pure ()
     UnitExpectText t -> assertEq (TE.decodeUtf8 (BSS.fromShort encVal)) t
     UnitExpectBytes b -> assertEq (BSS.unpack encVal) b
-  let (endRes, endConBc) = decodeEnd encVal
+  (endRes, endConBc) <- hackLiftIO (decodeEnd encVal)
   case endRes of
     Left err -> failAt name err endConBc
     Right endVal -> do
@@ -97,8 +103,8 @@ shouldFail = \case
   FileExpectFail -> True
   _ -> False
 
-reDecodeEnd :: Binary a => a -> (Either GetError a, ByteCount)
-reDecodeEnd = decodeEnd . encode @_ @BSS.ShortByteString
+reDecodeEnd :: Binary a => a -> IO (Either GetError a, ByteCount)
+reDecodeEnd = decodeEnd <=< encode @_ @BSS.ShortByteString
 
 testFileRT :: FileRT -> TestTree
 testFileRT (FileRT name fn fe mayStaBc) = askOption $ \(DahditWriteMissing wm) ->
@@ -118,7 +124,7 @@ testFileRT (FileRT name fn fe mayStaBc) = askOption $ \(DahditWriteMissing wm) -
             let dynBc = byteSize fileVal
             for_ mayStaBc (dynBc @?=)
             unless (dynBc <= fileBc) (fail "Bad byte size")
-            let (endRes, endConBc) = reDecodeEnd fileVal
+            (endRes, endConBc) <- reDecodeEnd fileVal
             case endRes of
               Left err -> fail ("Re-decode " ++ fn ++ " failed: " ++ show err)
               Right endVal -> do
