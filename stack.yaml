@@ -1,7 +1,14 @@
-resolver: "https://raw.githubusercontent.com/ejconlon/stack-resolvers/master/head.yaml#1"
+resolver: lts-20.24
 
 ghc-options:
   "$everything": -haddock
 
 packages:
 - .
+
+extra-deps:
+- falsify-0.1.1
+- git: git@github.com:ejconlon/dahdit.git
+  commit: df49be5e15dd8a81cc00fc169e4884d6bd516664
+- git: git@github.com:ejconlon/daytripper.git
+  commit: 316e07cb463978b5ad7540b5df15f5745dfb1a05
