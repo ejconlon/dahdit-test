@@ -30,15 +30,15 @@ packages:
     commit: df49be5e15dd8a81cc00fc169e4884d6bd516664
     git: git@github.com:ejconlon/dahdit.git
 - completed:
-    commit: 939513e9e3a9250f1f1a1d27a18281375296e985
+    commit: d92bd871eb466a6fe5ecd65d8bb5f9a3389ce7dd
     git: git@github.com:ejconlon/daytripper.git
     name: daytripper
     pantry-tree:
-      sha256: 6b8d4f01904c2792a60e96b7cb66e3bafbf4784ec51d7f7046f1a25c1e8a1a4f
-      size: 712
+      sha256: c2bb08f54f1b177372b4ca7a287a55177c960847e1f6457a87075bd1924c6983
+      size: 764
     version: 0.1.0
   original:
-    commit: 939513e9e3a9250f1f1a1d27a18281375296e985
+    commit: d92bd871eb466a6fe5ecd65d8bb5f9a3389ce7dd
     git: git@github.com:ejconlon/daytripper.git
 snapshots:
 - completed:

@@ -27,7 +27,7 @@ source-repository head
 library
   exposed-modules:
       Test.Dahdit.Arb
-      Test.Dahdit.Tasty
+      Test.Dahdit.Daytripper
   other-modules:
       Paths_dahdit_test
   hs-source-dirs:
@@ -66,10 +66,6 @@ library
     , daytripper ==0.1.*
     , directory ==1.3.*
     , falsify >=0.1.1 && <0.2
-    , optparse-applicative ==0.17.*
-    , tagged ==0.8.*
-    , tasty ==1.4.*
-    , tasty-hunit ==0.10.*
     , text >=1.2 && <2.1
   default-language: GHC2021
 
@@ -115,9 +111,6 @@ test-suite dahdit-test-test
     , daytripper ==0.1.*
     , directory ==1.3.*
     , falsify >=0.1.1 && <0.2
-    , optparse-applicative ==0.17.*
-    , tagged ==0.8.*
-    , tasty
-    , tasty-hunit
+    , tasty ==1.4.*
     , text >=1.2 && <2.1
   default-language: GHC2021

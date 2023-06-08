@@ -12,4 +12,4 @@ extra-deps:
 - git: git@github.com:ejconlon/dahdit.git
   commit: df49be5e15dd8a81cc00fc169e4884d6bd516664
 - git: git@github.com:ejconlon/daytripper.git
-  commit: 939513e9e3a9250f1f1a1d27a18281375296e985
+  commit: d92bd871eb466a6fe5ecd65d8bb5f9a3389ce7dd
