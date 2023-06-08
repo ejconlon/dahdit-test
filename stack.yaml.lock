@@ -5,6 +5,13 @@
 
 packages:
 - completed:
+    hackage: data-sword-0.2.0.3@sha256:953cca4b4533a388df0ef17e06ac5530652d1d73decfe8b656242ccdf4b40999,1568
+    pantry-tree:
+      sha256: 60a104a3d3cbba2e099a9e7ce561322b2884f5323cf74fd876dfb59f265d803c
+      size: 439
+  original:
+    hackage: data-sword-0.2.0.3
+- completed:
     hackage: falsify-0.1.1@sha256:49c4d6acba99a2647b18502ff0265fb98570b77d7893c355ede4f2db17295cc1,5236
     pantry-tree:
       sha256: 96d0d0b4ef5b87b88f4c7e6ca93de6a9cfca5f788713be8faf32d6125000aa60
@@ -23,15 +30,15 @@ packages:
     commit: df49be5e15dd8a81cc00fc169e4884d6bd516664
     git: git@github.com:ejconlon/dahdit.git
 - completed:
-    commit: 316e07cb463978b5ad7540b5df15f5745dfb1a05
+    commit: 939513e9e3a9250f1f1a1d27a18281375296e985
     git: git@github.com:ejconlon/daytripper.git
     name: daytripper
     pantry-tree:
-      sha256: 86c1dc3e27b24407b0c5f26bd0b114d0b13444b13052f95a34352ab56c8e77d5
+      sha256: 6b8d4f01904c2792a60e96b7cb66e3bafbf4784ec51d7f7046f1a25c1e8a1a4f
       size: 712
     version: 0.1.0
   original:
-    commit: 316e07cb463978b5ad7540b5df15f5745dfb1a05
+    commit: 939513e9e3a9250f1f1a1d27a18281375296e985
     git: git@github.com:ejconlon/daytripper.git
 snapshots:
 - completed:

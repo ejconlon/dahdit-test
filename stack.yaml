@@ -7,8 +7,9 @@ packages:
 - .
 
 extra-deps:
+- data-sword-0.2.0.3
 - falsify-0.1.1
 - git: git@github.com:ejconlon/dahdit.git
   commit: df49be5e15dd8a81cc00fc169e4884d6bd516664
 - git: git@github.com:ejconlon/daytripper.git
-  commit: 316e07cb463978b5ad7540b5df15f5745dfb1a05
+  commit: 939513e9e3a9250f1f1a1d27a18281375296e985
